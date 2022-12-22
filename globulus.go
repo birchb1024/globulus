@@ -26,6 +26,10 @@ func main() {
 	defer func(file *os.File) { _ = file.Close() }(fd)
 
 	r := csv.NewReader(fd)
+	r.LazyQuotes = true
+	r.TrimLeadingSpace = true
+	//r.FieldsPerRecord = -1
+
 	records, err := r.ReadAll()
 	if err != nil {
 		log.Fatal(err)
@@ -55,7 +59,7 @@ func main() {
 		for columnNumber, value := range record {
 			if columnDataTypes[columnNumber] == nil {
 				columnDataTypes[columnNumber] = make(map[string]int)
-				for _, typeName := range []string{"empyty", "int", "float", "bool", "other"} {
+				for _, typeName := range []string{"empty", "int", "float", "bool", "other"} {
 					columnDataTypes[columnNumber][typeName] = 0
 				}
 			}
@@ -96,16 +100,17 @@ func main() {
 	// Group columns by count of different values in them
 	// Initialise empty matrix
 	groupByCountValues := map[int][]int{}
-	for i := range groupByCountValues {
-		groupByCountValues[i] = []int{}
-	}
 	// Scan the value counts, collect max ever
 	max := 0
 	for columnNumber, values := range columnCountDistinctValues {
-		if len(values) > max {
-			max = len(values)
+		lv := len(values)
+		if lv > max {
+			max = lv
 		}
-		groupByCountValues[len(values)] = append(groupByCountValues[len(values)], columnNumber)
+		if groupByCountValues[lv] == nil {
+			groupByCountValues[lv] = []int{}
+		}
+		groupByCountValues[lv] = append(groupByCountValues[lv], columnNumber)
 	}
 
 	// Compute a new ordering of the columns
@@ -128,6 +133,7 @@ func main() {
 
 		for _, newColumnNumber := range colList {
 			newOrder[columnNumber] = newColumnNumber
+			columnNumber++
 		}
 	}
 
